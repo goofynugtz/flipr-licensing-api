@@ -1,0 +1,9 @@
+venv
+.venv/
+*.sqlite3
+__pycache__
+static
+*.pdf
+*.docx
+*.pem
+.env
