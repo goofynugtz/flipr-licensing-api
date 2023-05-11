@@ -7,3 +7,4 @@ static
 *.docx
 *.pem
 .env
+migrations
