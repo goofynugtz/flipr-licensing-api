@@ -7,7 +7,8 @@ class License(models.Model):
         ("VALID", "Valid"),
         ("SUSPENDED", "Suspended"), 
         ("EXPIRED", "Expired"), 
-        ("USER_SCOPE_MISMATCH", "Incorrect Email")
+        ("USER_SCOPE_MISMATCH", "Incorrect Email"),
+        ("INVALID", "Not Found")
     ]
 
     id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)
@@ -17,6 +18,9 @@ class License(models.Model):
     private_key = models.CharField(max_length=2048, null=True, editable=False)
     status = models.CharField(max_length=255, choices=VALIDATION_CODES, default="VALID")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    # WARN: Valid Upto?
+    
     updatedAt = models.DateTimeField(auto_now=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
