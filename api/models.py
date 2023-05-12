@@ -1,6 +1,6 @@
 from django.db import models
 import uuid
-from accounts.models import Employee
+from django.contrib.auth.models import User
 
 class License(models.Model):
     VALIDATION_CODES = [
@@ -13,8 +13,10 @@ class License(models.Model):
     id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)
     name = models.CharField(max_length=255)
     key = models.CharField(max_length=1024, unique=True, editable=False)
+    public_key = models.CharField(max_length=2048, null=True, editable=False)
+    private_key = models.CharField(max_length=2048, null=True, editable=False)
     status = models.CharField(max_length=255, choices=VALIDATION_CODES, default="VALID")
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     updatedAt = models.DateTimeField(auto_now=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
