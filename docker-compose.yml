@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./static:/static
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PASSWORD=jaspercyan
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=notesdatabase
+    ports:
+      - 5432:5432
+
+  nginx:
+    image: nginx
+    restart: always
+    volumes:
+    - ./static:/static
+    - ./nginx/conf.d:/etc/nginx/conf.d
+    - ./nginx/certbot/conf:/etc/letsencrypt
+    - ./nginx/certbot/logs:/var/log/letsencrypt
+    - ./nginx/certbot/data:/usr/share/nginx/html/letsencrypt
+    ports:
+    - 80:80
+    - 443:443
+    depends_on:
+      - prometheus
+      - web
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    ports:
+      - 9090:9090
+    depends_on:
+      - web
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
+    restart: 'no'
+    volumes:
+      - grafana:/var/lib/grafana
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus
+
+volumes:
+  data:
+  grafana:
