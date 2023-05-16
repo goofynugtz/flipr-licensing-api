@@ -8,7 +8,7 @@ class License(models.Model):
         ("SUSPENDED", "Suspended"), 
         ("EXPIRED", "Expired"), 
         ("USER_SCOPE_MISMATCH", "Incorrect Email"),
-        ("INVALID", "Not Found")
+        # ("INVALID", "Not Found")
     ]
 
     id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)

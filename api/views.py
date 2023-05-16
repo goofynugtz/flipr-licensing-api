@@ -76,10 +76,22 @@ def suspend(request):
         print(user.username)
         license_record = License.objects.get(user=user)
         print(license_record)
-        # license_serializer = LicenseSerializer(instance=license_record, data=?)
-        # print(license_serializer.data)
+        modified_data = {
+            "id": license_record.id,
+            "name": license_record.name,
+            "key": license_record.key,
+            "public_key": license_record.public_key,
+            "private_key": license_record.private_key,
+            "status": "SUSPENDED",
+            "user": license_record.user,
+            "updatedAt": license_record.updatedAt,
+            "createdAt": license_record.createdAt
+        }
+        print(modified_data)
+        license_serializer = LicenseSerializer(instance=license_record, data=modified_data)
+        print(license_serializer)
         # print(license_serializer.is_valid())
-        # license_serializer.save()
+        license_serializer.save()
         counter['suspended'].inc()
         return Response("License Suspended", status=status.HTTP_202_ACCEPTED)
     except:
