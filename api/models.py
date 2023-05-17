@@ -6,9 +6,7 @@ class License(models.Model):
     VALIDATION_CODES = [
         ("VALID", "Valid"),
         ("SUSPENDED", "Suspended"), 
-        ("EXPIRED", "Expired"), 
-        ("USER_SCOPE_MISMATCH", "Incorrect Email"),
-        # ("INVALID", "Not Found")
+        ("EXPIRED", "Expired"),
     ]
 
     id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)
