@@ -2,22 +2,34 @@ from django.contrib import admin
 from .models import Organization, Employee
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
+from .forms import EmployeeCreationForm, EmployeeChangeForm
 
-class EmployeeInline(admin.TabularInline):
+class EmployeeAdmin(UserAdmin):
+    add_form = EmployeeCreationForm
+    form = EmployeeChangeForm
     model = Employee
-    can_delete = False
-    verbose_name_plural = "employee"
+    list_display = ('email', 'name', 'organization', 'is_staff', 'is_active')
+    list_filter = ('email', 'name', 'organization', 'is_staff', 'is_active')
 
-class UserAdmin(UserAdmin):
-    inlines = [EmployeeInline]
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        ('Details', {'fields': (('name', 'organization',), 'phone', 'address')}),
+        ('Permissions', {'fields': ('is_staff', 'is_active')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2', 'is_staff', 'is_active', )
+        })
+    )
+    search_fields = ('email', 'name', 'organization', 'phone')
+    ordering = ('organization', 'name', 'email',)
+
+
+admin.site.register(Employee, EmployeeAdmin)
 
 class OrganizationAdmin(admin.ModelAdmin):
     list_display = ('title', 'url')
 
-class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('user', 'organization', 'mobile')
-
-admin.site.unregister(User)
-admin.site.register(User, UserAdmin)
 admin.site.register(Organization, OrganizationAdmin)
-admin.site.register(Employee, EmployeeAdmin)
+
