@@ -23,7 +23,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=jaspercyan
       - POSTGRES_USER=postgres
-      - POSTGRES_DB=notesdatabase
+      - POSTGRES_DB=licenseapi
     ports:
       - 5432:5432
 
