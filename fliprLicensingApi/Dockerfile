@@ -8,6 +8,6 @@ COPY ./requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 COPY . /
 RUN apt-get update
-RUN apt-get -y install curl
+RUN apt-get -y install curl awscli
 ENTRYPOINT [ "bash","./script.sh" ]
-HEALTHCHECK CMD curl --fail http://localhost:8000/api || exit 1
+# HEALTHCHECK CMD curl --fail http://localhost:8000/api || exit 1
