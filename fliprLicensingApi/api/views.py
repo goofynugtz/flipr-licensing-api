@@ -1,17 +1,18 @@
+from django.contrib.auth.models import User
+from django.db.transaction import atomic, non_atomic_requests
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .utils import validate_signature, generate_license, new_rsa
-import jwt
+from prometheus_client import Counter
+import prometheus_client
 from decouple import config
 from .models import License
 from .serializers import LicenseSerializer
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-import prometheus_client
-from prometheus_client import Counter
+import jwt
 
 counter = {
     'success': Counter('total_successful_validations', 'Total no. of successful validation requests'),
@@ -23,10 +24,13 @@ counter = {
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@non_atomic_requests
 def validate(request):
+    email = request.data["email"].lower()
     try:
-        user = User.objects.get(email=request.data["email"])
+        user = User.objects.get(email=email)
         try:
+            # WARN: Still not checking valid upto status.
             license_record = License.objects.get(user=user)
             if (validate_signature(email=request.data['email'], license_key=request.data['key'], public_key=license_record.public_key)):
                 counter['success'].inc()
@@ -43,6 +47,7 @@ def validate(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@atomic
 def issue(request):
     access_token = request.headers['Authorization'].split(' ')[-1]
     name = request.data["name"]
@@ -50,6 +55,9 @@ def issue(request):
     email = data['email']
     try:
         user = User.objects.get(email=email)
+        previous_license = License.objects.filter(user=user)
+        if (len(previous_license) > 0):
+            previous_license.delete()
         public_key, private_key = new_rsa()
         key = generate_license(email, private_key)
         License.objects.create(
@@ -66,6 +74,7 @@ def issue(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@non_atomic_requests
 def suspend(request):
     access_token = request.headers['Authorization'].split(' ')[-1]
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
@@ -73,37 +82,29 @@ def suspend(request):
     print(email)
     try:
         user = User.objects.get(email=email)
-        print(user.username)
         license_record = License.objects.get(user=user)
-        print(license_record)
         modified_data = {
-            "id": license_record.id,
             "name": license_record.name,
-            "key": license_record.key,
-            "public_key": license_record.public_key,
-            "private_key": license_record.private_key,
             "status": "SUSPENDED",
-            "user": license_record.user,
-            "updatedAt": license_record.updatedAt,
-            "createdAt": license_record.createdAt
         }
-        print(modified_data)
         license_serializer = LicenseSerializer(instance=license_record, data=modified_data)
-        print(license_serializer)
-        # print(license_serializer.is_valid())
-        license_serializer.save()
-        counter['suspended'].inc()
-        return Response("License Suspended", status=status.HTTP_202_ACCEPTED)
-    except:
+        
+        if license_serializer.is_valid():
+            license_serializer.save()
+            counter['suspended'].inc()
+            return Response("License Suspended", status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response("Something went wrong", status=status.HTTP_304_NOT_MODIFIED)
+    except ObjectDoesNotExist:
         return Response("User/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@non_atomic_requests
 def revoke(request):
     access_token = request.headers['Authorization'].split(' ')[-1]
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
     email = data['email']
-    print(email)
     try:
         user = User.objects.get(email=email)
         license_record = License.objects.get(user=user)
@@ -116,6 +117,7 @@ def revoke(request):
 @api_view(['GET'])
 # WARN: AllowAny
 @permission_classes([AllowAny])
+@non_atomic_requests
 def compute_metrics(request):
     res = []
     for _, value in counter.items():

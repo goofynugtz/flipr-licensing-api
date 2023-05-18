@@ -1,9 +1,10 @@
 venv
 .venv/
-*.sqlite3
+db.sqlite3
 __pycache__
 static
 *.pdf
 *.docx
 *.pem
 .env
+migrations

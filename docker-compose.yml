@@ -1,19 +1,23 @@
 version: '3'
 
 services:
-  web:
-    build: .
-    # command: python manage.py runserver 0.0.0.0:8000
+  
+  api:
+    container_name: api
+    build: 
+      context: ./fliprLicensingApi
+      dockerfile: Dockerfile
     volumes:
-      - ./static:/static
+      - ./fliprLicensingApi/static:/static
     ports:
       - 8000:8000
     depends_on:
       - db
     env_file:
-      - ./.env
+      - ./fliprLicensingApi/.env
 
   db:
+    container_name: api-db
     image: postgres:13.0-alpine
     volumes:
       - data:/var/lib/postgresql/data/
@@ -23,8 +27,9 @@ services:
       - POSTGRES_DB=notesdatabase
     ports:
       - 5432:5432
-
+    
   pgadmin:
+    container_name: api-db-admin
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
@@ -46,22 +51,22 @@ services:
     - 443:443
     depends_on:
       - prometheus
-      - web
+      - api
 
   prometheus:
+    container_name: prometheus
     image: prom/prometheus
     volumes:
       - ./prometheus/:/etc/prometheus/
     ports:
       - 9090:9090
     depends_on:
-      - web
+      - api
 
   grafana:
+    container_name: grafana
     image: grafana/grafana
-    environment:
-      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
-    restart: 'no'
+    restart: 'always'
     volumes:
       - grafana:/var/lib/grafana
     ports:

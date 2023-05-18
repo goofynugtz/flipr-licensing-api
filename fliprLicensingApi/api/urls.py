@@ -6,5 +6,5 @@ urlpatterns = [
     path('actions/validate/', validate, name='validate-key'),
     path('actions/suspend/', suspend, name='suspend'),
     path('actions/revoke/', revoke, name='revoke'),
-    path('metrics/', compute_metrics, name='metrics')
+    path('metrics/', compute_metrics, name='metrics'),
 ]
