@@ -1,7 +1,6 @@
 version: '3'
 
 services:
-  
   api:
     container_name: api
     build: 
@@ -17,7 +16,7 @@ services:
       - ./fliprLicensingApi/.env
 
   db:
-    container_name: api-db
+    container_name: postgres-db
     image: postgres:13.0-alpine
     volumes:
       - data:/var/lib/postgresql/data/
@@ -27,31 +26,22 @@ services:
       - POSTGRES_DB=notesdatabase
     ports:
       - 5432:5432
-    
-  # pgadmin:
-  #   container_name: pg-admin
-  #   image: dpage/pgadmin4
-  #   environment:
-  #     - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
-  #     - PGADMIN_DEFAULT_PASSWORD=admin
-  #   ports:
-  #     - 5050:80
 
-  # nginx:
-  #   image: nginx
-  #   restart: always
-  #   volumes:
-  #   - ./static:/static
-  #   - ./nginx/conf.d:/etc/nginx/conf.d
-  #   - ./nginx/certbot/conf:/etc/letsencrypt
-  #   - ./nginx/certbot/logs:/var/log/letsencrypt
-  #   - ./nginx/certbot/data:/usr/share/nginx/html/letsencrypt
-  #   ports:
-  #   - 80:80
-  #   - 443:443
-  #   depends_on:
-  #     - prometheus
-  #     - api
+  nginx:
+    image: nginx
+    restart: always
+    volumes:
+    - ./static:/static
+    - ./nginx/conf.d:/etc/nginx/conf.d
+    - ./nginx/certbot/conf:/etc/letsencrypt
+    - ./nginx/certbot/logs:/var/log/letsencrypt
+    - ./nginx/certbot/data:/usr/share/nginx/html/letsencrypt
+    ports:
+    - 80:80
+    - 443:443
+    depends_on:
+      - prometheus
+      - api
 
   prometheus:
     container_name: prometheus

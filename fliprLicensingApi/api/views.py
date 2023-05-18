@@ -1,15 +1,14 @@
-from django.contrib.auth.models import User
-from django.db.transaction import atomic, non_atomic_requests
-from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .utils import validate_signature, generate_license, new_rsa
-from prometheus_client import Counter
-import prometheus_client
+from django.db.transaction import atomic, non_atomic_requests
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponse
+from accounts.models import Employee
+from prometheus_client import Counter, generate_latest
 from decouple import config
+from .utils import validate_signature, generate_license, new_rsa, mail_license_keys
 from .models import License
 from .serializers import LicenseSerializer
 import jwt
@@ -28,7 +27,7 @@ counter = {
 def validate(request):
     email = request.data["email"].lower()
     try:
-        user = User.objects.get(email=email)
+        user = Employee.objects.get(email=email)
         try:
             # WARN: Still not checking valid upto status.
             license_record = License.objects.get(user=user)
@@ -54,7 +53,7 @@ def issue(request):
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
     email = data['email']
     try:
-        user = User.objects.get(email=email)
+        user = Employee.objects.get(email=email)
         previous_license = License.objects.filter(user=user)
         if (len(previous_license) > 0):
             previous_license.delete()
@@ -67,10 +66,12 @@ def issue(request):
             private_key = private_key,
             user = user
         )
+        mail_license_keys(key, email)
         counter['issued'].inc()
-        return Response(key, status=status.HTTP_201_CREATED)
+        return Response("Success", status=status.HTTP_201_CREATED)
     except ObjectDoesNotExist:
-        return Response("User/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
+        return Response("Employee/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -81,14 +82,13 @@ def suspend(request):
     email = data['email']
     print(email)
     try:
-        user = User.objects.get(email=email)
+        user = Employee.objects.get(email=email)
         license_record = License.objects.get(user=user)
         modified_data = {
             "name": license_record.name,
             "status": "SUSPENDED",
         }
         license_serializer = LicenseSerializer(instance=license_record, data=modified_data)
-        
         if license_serializer.is_valid():
             license_serializer.save()
             counter['suspended'].inc()
@@ -96,7 +96,33 @@ def suspend(request):
         else:
             return Response("Something went wrong", status=status.HTTP_304_NOT_MODIFIED)
     except ObjectDoesNotExist:
-        return Response("User/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@non_atomic_requests
+def resume(request):
+    access_token = request.headers['Authorization'].split(' ')[-1]
+    data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
+    email = data['email']
+    print(email)
+    try:
+        user = Employee.objects.get(email=email)
+        license_record = License.objects.get(user=user)
+        modified_data = {
+            "name": license_record.name,
+            "status": "VALID",
+        }
+        license_serializer = LicenseSerializer(instance=license_record, data=modified_data)
+        if license_serializer.is_valid():
+            license_serializer.save()
+            return Response("License status continued", status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response("Something went wrong", status=status.HTTP_304_NOT_MODIFIED)
+    except ObjectDoesNotExist:
+        return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -106,14 +132,14 @@ def revoke(request):
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
     email = data['email']
     try:
-        user = User.objects.get(email=email)
+        user = Employee.objects.get(email=email)
         license_record = License.objects.get(user=user)
         license_record.delete()
         counter['revoked'].inc()
         return Response("Deleted", status=status.HTTP_200_OK)
     except:
-        return Response("User/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
-    
+        return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+
 @api_view(['GET'])
 # WARN: AllowAny
 @permission_classes([AllowAny])
@@ -121,5 +147,5 @@ def revoke(request):
 def compute_metrics(request):
     res = []
     for _, value in counter.items():
-        res.append(prometheus_client.generate_latest(value))
+        res.append(generate_latest(value))
     return HttpResponse(res, content_type="text/plain")
