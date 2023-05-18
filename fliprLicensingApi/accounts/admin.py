@@ -18,8 +18,8 @@ class EmployeeAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'is_staff', 'is_active', )
-        })
+            'fields': ('email', 'password1', 'password2', 'is_staff', 'is_active', ),
+        }, ),
     )
     search_fields = ('email', 'name', 'organization', 'phone')
     ordering = ('organization', 'name', 'email',)
