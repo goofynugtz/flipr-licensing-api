@@ -12,10 +12,6 @@ def new_rsa():
     return public.save_pkcs1().decode(), private.save_pkcs1().decode()
 
 def validate_signature(email, license_key, public_key):
-    print(email)
-    print(license_key)
-    print(public_key)
-
     key = rsa.PublicKey.load_pkcs1(public_key)
     try:
         rsa.verify(email.encode(), b64decode(license_key), key)

@@ -4,7 +4,6 @@ from .views import new_rsa
 
 class GenerateLicense():
     def setUp(self):
-        print("HEllo")
         new_rsa('public.pem', 'private.pem')
 
     def tearDown(self):

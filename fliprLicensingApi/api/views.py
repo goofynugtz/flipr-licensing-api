@@ -80,7 +80,6 @@ def suspend(request):
     access_token = request.headers['Authorization'].split(' ')[-1]
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
     email = data['email']
-    print(email)
     try:
         user = Employee.objects.get(email=email)
         license_record = License.objects.get(user=user)
@@ -106,7 +105,6 @@ def resume(request):
     access_token = request.headers['Authorization'].split(' ')[-1]
     data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
     email = data['email']
-    print(email)
     try:
         user = Employee.objects.get(email=email)
         license_record = License.objects.get(user=user)
