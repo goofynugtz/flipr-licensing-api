@@ -126,9 +126,9 @@ def resume(request):
 @permission_classes([IsAuthenticated])
 @non_atomic_requests
 def revoke(request):
-    access_token = request.headers['Authorization'].split(' ')[-1]
-    data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
-    email = data['email']
+    # access_token = request.headers['Authorization'].split(' ')[-1]
+    # data = jwt.decode(access_token, algorithms=['HS256'], key=config('SECRET_KEY'))
+    email = request.data['email']
     try:
         user = Employee.objects.get(email=email)
         license_record = License.objects.get(user=user)
