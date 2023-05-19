@@ -27,16 +27,17 @@ services:
     env_file:
       - ./fliprLicensingApi/.env
 
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - 5050:80
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
+  #     - PGADMIN_DEFAULT_PASSWORD=admin
+  #   ports:
+  #     - 5050:80
 
   nginx:
     image: nginx
+    container_name: nginx
     restart: always
     volumes:
     - ./static:/static
