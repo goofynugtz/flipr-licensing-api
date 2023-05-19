@@ -18,7 +18,7 @@ class EmployeeAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'is_staff', 'is_active', ),
+            'fields': (('email', 'name',), 'password1', 'password2', ('organization', 'phone',), 'address',  'is_staff', 'is_active', ),
         }, ),
     )
     search_fields = ('email', 'name', 'organization', 'phone')
@@ -28,7 +28,7 @@ class EmployeeAdmin(UserAdmin):
 admin.site.register(Employee, EmployeeAdmin)
 
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ('title', 'url')
+    list_display = ('title', 'url', 'address')
 
 admin.site.register(Organization, OrganizationAdmin)
 

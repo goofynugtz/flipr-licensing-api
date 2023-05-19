@@ -24,11 +24,11 @@ def mail_license_keys(key, to_email):
     from_mail = config("FROM_ACCOUNT")
     subject = "License Key"
     body = f"""
-        Your requested license key is mentioned below 
-        
-        License Key: {key}
-        Issued To: {to_email}
+Your requested license key is mentioned below 
 
-        This is an auto-generated mail. Please, do not reply.
-    """
+License Key: {key}
+Issued To: {to_email}
+
+This is an auto-generated mail. Please, do not reply.
+"""
     send_mail(subject, body, from_mail, [to_email])
