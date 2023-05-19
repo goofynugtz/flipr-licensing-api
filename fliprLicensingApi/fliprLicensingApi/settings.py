@@ -134,22 +134,22 @@ WSGI_APPLICATION = 'fliprLicensingApi.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-# DATABASES = {        
+# DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': config('SQL_DBNAME'),
-#         'USER': config('SQL_USER'),
-#         'PASSWORD': config('SQL_PASSWORD'),
-#         'HOST': 'db',
-#         'PORT': '5432',
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('SQL_DBNAME'),
+        'USER': config('SQL_USER'),
+        'PASSWORD': config('SQL_PASSWORD'),
+        'HOST': 'db',
+        'PORT': '5432',
+    }
+}
 
 
 # Password validation

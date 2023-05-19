@@ -9,6 +9,5 @@ RUN pip install -r /app/requirements.txt
 COPY . /app
 RUN apt-get update
 RUN apt-get -y install curl awscli
-# RUN apt-get -y install awscli
 ENTRYPOINT [ "bash","./script.sh" ]
 # HEALTHCHECK CMD curl --fail http://localhost:8000/api || exit 1
