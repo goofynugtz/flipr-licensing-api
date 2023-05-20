@@ -6,18 +6,11 @@ from rest_framework.response import Response
 from rest_framework import status
 
 class CustomObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['email'] = user.email
-        return token
+  @classmethod
+  def get_token(cls, user):
+    token = super().get_token(user)
+    token['email'] = user.email
+    return token
 
 class CustomObtainPairView(TokenObtainPairView):
-    serializer_class = CustomObtainPairSerializer
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def webhook(request):
-    print(request.headers)
-    print(request.data)
-    return Response('success', status=status.HTTP_200_OK)
+  serializer_class = CustomObtainPairSerializer

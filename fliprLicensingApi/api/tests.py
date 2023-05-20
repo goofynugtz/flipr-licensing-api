@@ -3,12 +3,12 @@ import os
 from .views import new_rsa
 
 class GenerateLicense():
-    def setUp(self):
-        new_rsa('public.pem', 'private.pem')
-
-    def tearDown(self):
-        os.remove('public.pem')
-        os.remove('private.pem')
+  def setUp(self):
+    new_rsa('public.pem', 'private.pem')
+  
+  def tearDown(self):
+    os.remove('public.pem')
+    os.remove('private.pem')
 
 test1 = GenerateLicense()
 test1.setUp()
