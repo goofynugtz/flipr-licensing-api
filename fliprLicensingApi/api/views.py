@@ -12,7 +12,7 @@ from prometheus_client import Counter, generate_latest
 from decouple import config
 from .models import License, Policy
 from .serializers import LicenseSerializer
-import jwt, datetime
+import jwt
 
 counter = {
   'success': Counter('total_successful_validations', 'Total no. of successful validation requests'),
@@ -22,6 +22,7 @@ counter = {
   'revoked': Counter('total_licenses_revoked', 'Total no. of license keys revoked')
 }
 
+# Body { "email", "key" }
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @non_atomic_requests
@@ -33,11 +34,8 @@ def validate(request):
     try:
       license_record = License.objects.get(user=user)
       if (validate_signature(email=email, license_key=key, public_key=license_record.public_key)):
-        print("\n\n", license_record.validUpto - datetime.now(), "\n\n")
-        if (license_record.validUpto - datetime.now() < 0):
-          record_status = {
-            "status": License.EXP, 
-          }
+        if (license_record.validUpto < timezone.now()):
+          record_status = { "status": License.EXP, }
           license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
           if (license_serializer.is_valid()):
             license_serializer.save()
@@ -56,6 +54,8 @@ def validate(request):
     counter['failed'].inc()
     return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
 
+# Header { "Authorization": "Bearer JWT" } 
+# Body   { "name", "policy"}
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @atomic
@@ -87,11 +87,14 @@ def issue(request):
       mail_license_keys(key, email)
       counter['issued'].inc()
       return Response("Success", status=status.HTTP_201_CREATED)
+      # return Response(key, status=status.HTTP_201_CREATED)
     except ObjectDoesNotExist:
       return Response("Employee/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
     return Response("Invalid policy.", status=status.HTTP_404_NOT_FOUND)
 
+# Header { "Authorization": "Bearer JWT" } 
+# Body   { "email" }
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 @non_atomic_requests
@@ -100,9 +103,7 @@ def suspend(request):
   try:
     user = Employee.objects.get(email=email)
     license_record = License.objects.get(user=user)
-    record_status = {
-      "status": License.SUS,
-    }
+    record_status = { "status": License.SUS, }
     license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
     if license_serializer.is_valid():
       license_serializer.save()
@@ -113,6 +114,8 @@ def suspend(request):
   except ObjectDoesNotExist:
     return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
 
+# Header { "Authorization": "Bearer JWT" } 
+# Body   { "email" }
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 @non_atomic_requests
@@ -121,9 +124,7 @@ def resume(request):
   try:
     user = Employee.objects.get(email=email)
     license_record = License.objects.get(user=user)
-    record_status = {
-      "status": License.VAL,
-    }
+    record_status = { "status": License.VAL, }
     license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
     if license_serializer.is_valid():
       license_serializer.save()
@@ -133,6 +134,8 @@ def resume(request):
   except ObjectDoesNotExist:
     return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
 
+# Header { "Authorization": "Bearer JWT" } 
+# Body   { "email" }
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @non_atomic_requests

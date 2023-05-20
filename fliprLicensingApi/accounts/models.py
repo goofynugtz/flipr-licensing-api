@@ -22,7 +22,7 @@ class Employee(AbstractUser, PermissionsMixin):
   
   USERNAME_FIELD = 'email'
   REQUIRED_FIELDS = ['name']
-  objects = EmployeeManager()  
+  objects = EmployeeManager()
   
   def __str__(self) -> str:
     return self.name

@@ -3,7 +3,7 @@ import uuid, datetime
 from accounts.models import Employee
 
 class Policy(models.Model):
-  MINUTE = datetime.timedelta(seconds=60) # CASE: This is for a testing scenario. Will be removed.
+  MINUTE = datetime.timedelta(seconds=120) # CASE: This is for testing purpose only. Will be removed.
   DAY = datetime.timedelta(days=1)
   WEEK = datetime.timedelta(weeks=1)
   MONTH = datetime.timedelta(weeks=4)
