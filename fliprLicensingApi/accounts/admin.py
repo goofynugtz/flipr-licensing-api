@@ -12,20 +12,20 @@ class EmployeeAdmin(UserAdmin):
   
   fieldsets = (
     (None, {'fields': ('email', 'password')}),
-    ('Details', {'fields': (('name', 'organization',), 'phone', 'address')}),
+    ('Details', {'fields': (('name', 'organization',), 'phone', 'emp_address')}),
     ('Permissions', {'fields': ('is_staff', 'is_active')}),
   )
   add_fieldsets = (
     (None, {
       'classes': ('wide',),
-      'fields': (('email', 'name',), 'password1', 'password2', ('organization', 'phone',), 'address',  'is_staff', 'is_active', ),
+      'fields': (('email', 'name',), 'password1', 'password2', ('organization', 'phone',), 'emp_address',  'is_staff', 'is_active', ),
     }, ),
   )
   search_fields = ('email', 'name', 'organization', 'phone')
   ordering = ('organization', 'name', 'email',)
 
 class OrganizationAdmin(admin.ModelAdmin):
-  list_display = ('title', 'url', 'address')
+  list_display = ('title', 'url', 'org_address')
 
 admin.site.register(Employee, EmployeeAdmin)
 admin.site.register(Organization, OrganizationAdmin)

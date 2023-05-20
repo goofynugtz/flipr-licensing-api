@@ -1,13 +1,13 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.decorators import api_view, permission_classes
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from .manager import EmployeeManager
 from .models import Employee, Organization
-from rest_framework import exceptions, serializers
-from django.http import HttpResponseRedirect
+from .utils import send_password_reset_mail
+import uuid
 
 class CustomObtainPairSerializer(TokenObtainPairSerializer):
   @classmethod
@@ -33,8 +33,39 @@ def signup(request):
   user = Employee.objects.filter(email=email)
   if (len(user) > 0):
     return Response("Already exists", status=status.HTTP_208_ALREADY_REPORTED)
-  Employee.objects.create(name=name, email=email, organization=organization, phone=phone, address=address)
+  Employee.objects.create(name=name, email=email, organization=organization, phone=phone, emp_address=address)
   user = Employee.objects.get(email=email)
   user.set_password(password)
   user.save()
   return Response("User signed up", status=status.HTTP_201_CREATED)
+
+# Body { "email" }
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_request(request):
+  email = request.data['email']
+  try:
+    user = Employee.objects.get(email=email)
+    token = uuid.uuid4()
+    user.password_reset_token = token
+    print(user)
+    user.save()
+    send_password_reset_mail(email, token)
+    return Response("Reset link has been sent on email.", status=status.HTTP_200_OK)
+  except ObjectDoesNotExist:
+    return Response("No user found with this email.", status=status.HTTP_204_NO_CONTENT)
+
+# Body { "password" }
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request, token):
+  try:
+    user = Employee.objects.get(password_reset_token=token)
+    password = request.data['password']
+    user.set_password(password)
+    user.password_reset_token = None
+    print(user)
+    user.save()
+    return Response("Password reset successfull.", status=status.HTTP_202_ACCEPTED)
+  except ObjectDoesNotExist:
+    return Response("Password reset token has expired.", status=status.HTTP_403_FORBIDDEN)
