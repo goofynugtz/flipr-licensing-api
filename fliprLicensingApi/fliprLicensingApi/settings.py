@@ -54,6 +54,7 @@ REST_FRAMEWORK = {
     )
 }
 
+CSRF_TRUSTED_ORIGINS = ['https://licensing.sr.flipr.ai']
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
