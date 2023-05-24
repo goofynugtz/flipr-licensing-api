@@ -7,13 +7,13 @@ class EmployeeAdmin(UserAdmin):
   add_form = EmployeeCreationForm
   form = EmployeeChangeForm
   model = Employee
-  list_display = ('email', 'name', 'organization', 'is_staff', 'is_active')
-  list_filter = ('email', 'name', 'organization', 'is_staff', 'is_active')
+  list_display = ('email', 'name', 'organization', 'is_verified', 'is_staff', 'is_active',)
+  list_filter = ('email', 'name', 'organization', 'is_verified', 'is_staff', 'is_active')
   
   fieldsets = (
     (None, {'fields': ('email', 'password')}),
     ('Details', {'fields': (('name', 'organization',), 'phone', 'emp_address')}),
-    ('Permissions', {'fields': ('is_staff', 'is_active')}),
+    ('Permissions', {'fields': ('is_verified', 'is_staff', 'is_active', 'confirmation_token',)}),
   )
   add_fieldsets = (
     (None, {
@@ -21,8 +21,8 @@ class EmployeeAdmin(UserAdmin):
       'fields': (('email', 'name',), 'password1', 'password2', ('organization', 'phone',), 'emp_address',  'is_staff', 'is_active', ),
     }, ),
   )
-  search_fields = ('email', 'name', 'organization', 'phone')
-  ordering = ('organization', 'name', 'email',)
+  search_fields = ('is_verified', 'email', 'name', 'organization', 'phone')
+  ordering = ('organization', 'is_verified', 'name', 'email',)
 
 class OrganizationAdmin(admin.ModelAdmin):
   list_display = ('title', 'url', 'org_address')

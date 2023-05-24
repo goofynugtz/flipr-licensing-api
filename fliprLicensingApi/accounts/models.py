@@ -5,7 +5,7 @@ import uuid
 
 class Organization(models.Model):
   id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)
-  title = models.CharField(max_length=255)
+  title = models.CharField(max_length=255, unique=True)
   url = models.URLField(null=True, blank=True)
   org_address = models.CharField(max_length=1024, null=True, blank=True)
 
@@ -20,6 +20,8 @@ class Employee(AbstractUser, PermissionsMixin):
   phone = models.CharField("Phone", max_length=14, unique=True, null=True, blank=True)
   emp_address = models.CharField(max_length=1024, blank=True, null=True)
   password_reset_token = models.UUIDField(default=uuid.uuid4, null=True, editable=False)
+  confirmation_token = models.UUIDField(default=uuid.uuid4, blank=True, null=True)
+  is_verified = models.BooleanField(default=False)
   
   USERNAME_FIELD = 'email'
   REQUIRED_FIELDS = ['name']

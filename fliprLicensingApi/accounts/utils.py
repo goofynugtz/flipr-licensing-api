@@ -13,3 +13,17 @@ This is an auto-generated mail. Please, do not reply.
 """
   send_mail(subject, body, from_mail, [to_email])
   return True
+
+def send_verification_mail(to_email, confirmation_token):
+  confirmation_uri = f"https://{config('BASE_URI')}/accounts/verify/{confirmation_token}/"
+  from_mail = config("FROM_ACCOUNT")
+  subject = "Confirm your Account"
+  body = f"""
+We have a signup request from this email. To confirm signup, visit the following link:
+{confirmation_uri}
+If it wasn't you, then please ignore this mail.
+
+This is an auto-generated mail. Please, do not reply.
+"""
+  send_mail(subject, body, from_mail, [to_email])
+  return True

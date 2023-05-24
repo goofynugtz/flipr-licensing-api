@@ -31,25 +31,27 @@ def validate(request):
   key = request.data['key']
   try:
     user = Employee.objects.get(email=email)
-    try:
-      license_record = License.objects.get(user=user)
-      if (validate_signature(email=email, license_key=key, public_key=license_record.public_key)):
-        if (license_record.validUpto < timezone.now()):
-          record_status = { "status": License.EXP, }
-          license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
-          if (license_serializer.is_valid()):
-            license_serializer.save()
+    if user.is_verified == True:
+      try:
+        license_record = License.objects.get(user=user)
+        if (validate_signature(email=email, license_key=key, public_key=license_record.public_key)):
+          if (license_record.validUpto < timezone.now()):
+            record_status = { "status": License.EXP, }
+            license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
+            if (license_serializer.is_valid()):
+              license_serializer.save()
+            counter['failed'].inc()
+            return Response(license_record.status, status=status.HTTP_406_NOT_ACCEPTABLE)
+          else: 
+            counter['success'].inc()
+            return Response(license_record.status, status=status.HTTP_200_OK)
+        else:
           counter['failed'].inc()
-          return Response(license_record.status, status=status.HTTP_406_NOT_ACCEPTABLE)
-        else: 
-          counter['success'].inc()
-          return Response(license_record.status, status=status.HTTP_200_OK)
-      else:
+          return Response("INVALID", status=status.HTTP_406_NOT_ACCEPTABLE)
+      except ObjectDoesNotExist:
         counter['failed'].inc()
-        return Response("INVALID", status=status.HTTP_406_NOT_ACCEPTABLE)
-    except ObjectDoesNotExist:
-      counter['failed'].inc()
-      return Response("NOT_FOUND", status=status.HTTP_404_NOT_FOUND)
+        return Response("NOT_FOUND", status=status.HTTP_404_NOT_FOUND)
+    return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
   except ObjectDoesNotExist:
     counter['failed'].inc()
     return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
@@ -69,25 +71,27 @@ def issue(request):
     email = data['email']
     try:
       user = Employee.objects.get(email=email)
-      previous_license = License.objects.filter(user=user)
-      if (len(previous_license) > 0):
-          previous_license.delete()
-      validUpto = timezone.now() + policy.validity
-      public_key, private_key = new_rsa()
-      key = generate_license(email, private_key)
-      License.objects.create(
-        name = name,
-        key = key,
-        public_key = public_key,
-        private_key = private_key,
-        user = user,
-        policy = policy,
-        validUpto = validUpto,
-      )
-      mail_license_keys(key, email)
-      counter['issued'].inc()
-      return Response("Success", status=status.HTTP_201_CREATED)
-      # return Response(key, status=status.HTTP_201_CREATED)
+      if user.is_verified == True:
+        previous_license = License.objects.filter(user=user)
+        if (len(previous_license) > 0):
+            previous_license.delete()
+        validUpto = timezone.now() + policy.validity
+        public_key, private_key = new_rsa()
+        key = generate_license(email, private_key)
+        License.objects.create(
+          name = name,
+          key = key,
+          public_key = public_key,
+          private_key = private_key,
+          user = user,
+          policy = policy,
+          validUpto = validUpto,
+        )
+        mail_license_keys(key, email)
+        counter['issued'].inc()
+        return Response("License key has been mailed.", status=status.HTTP_201_CREATED)
+        # return Response(key, status=status.HTTP_201_CREATED)
+      return Response("User not verified.", status=status.HTTP_400_BAD_REQUEST)
     except ObjectDoesNotExist:
       return Response("Employee/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
