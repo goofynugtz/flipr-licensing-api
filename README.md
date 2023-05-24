@@ -9,7 +9,7 @@ sudo docker-compose up --build
 
 For issueing a license  
 ### ```POST /api/issue/```
-```json
+```javascript
 headers:
 { 
   "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO"
@@ -24,7 +24,7 @@ body:
 Validating license from user
 ###  ```GET /api/actions/validate```
   
-```json
+```javascript
 body:
 { 
   "email": "someuser@example.com", 
@@ -41,7 +41,7 @@ A susperuser revoking the license
 A susperuser resuming the license after suspension
 ###  ```PATCH /api/actions/resume```
 The above all three [resume, revoke, suspend] endpoints have same header and body requirements.
-```json
+```javascript
 headers:
 { 
   "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO"
@@ -57,7 +57,7 @@ Prometheus endpoint
 
 # Accounts
 ###  ```POST /accounts/signup/```
-```json
+```javascript
 body: 
 { 
   "name": "Your Name", 
@@ -75,7 +75,7 @@ For account verification (can be used only once)
 
 For a password reset request:
 ###  ```POST /accounts/forgot-password/```
-```json
+```javascript
 body: 
 {
   "email": "someuser@example.com"
@@ -83,7 +83,7 @@ body:
 ```
 For a resetting password confirmation:
 ###  ```POST /accounts/forgot-password/<token>/```
-```json
+```javascript
 body: 
 {
   "password": "345yr3jh2hg4wet"
@@ -91,7 +91,7 @@ body:
 ```
 
 ###  ```POST /accounts/login/```
-```json
+```javascript
 body: 
 {
   "email": "someuser@example.com",
@@ -99,7 +99,7 @@ body:
 }
 ```
 This login post request would return ```access_token``` and ```refresh_token``` as
-```json
+```javascript
 {
   "refresh": "eyJhbGciOiJ...ssQfLtQ7NUluc",
   "access": "eyJhbGciOiJ...ut_cfO3dI0XBQ"
@@ -108,7 +108,7 @@ This login post request would return ```access_token``` and ```refresh_token``` 
 
 ###  ```POST /accounts/login/refresh/```
 For providing another access token after it expires.
-```json
+```javascript
 {
   "refresh": "eyJhbGciOiJ...ssQfLtQ7NUluc"
 }
