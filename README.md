@@ -8,7 +8,7 @@ sudo docker-compose up --build
 # Exposed endpoints:  
 
 For issueing a license  
-### POST /api/issue/
+### POST ```/api/issue/```
 ```javascript
 headers:
 { 
@@ -22,7 +22,7 @@ body:
 ```
 
 Validating license from user
-### GET /api/actions/validate
+### GET ```/api/actions/validate```
   
 ```javascript
 body:
@@ -33,13 +33,13 @@ body:
 ```
 
 A susperuser suspending the license
-### PATCH /api/actions/suspend
+### PATCH ```/api/actions/suspend```
 
 A susperuser revoking the license
-### PATCH /api/actions/revoke
+### PATCH ```/api/actions/revoke```
 
 A susperuser resuming the license after suspension
-### PATCH /api/actions/resume
+### PATCH ```/api/actions/resume```
 The above all three [resume, revoke, suspend] endpoints have same header and body requirements.
 ```javascript
 headers:
@@ -52,11 +52,11 @@ body:
 }
 ```
 Prometheus endpoint
-### GET /api/metrics/
+### GET ```/api/metrics/```
 
 
 # Accounts
-### POST /accounts/signup/
+###  POST ```/accounts/signup/```
 ```javascript
 body: 
 { 
@@ -70,11 +70,11 @@ body:
 ```
 
 For account verification (can be used only once)
-### GET /accounts/verify/<token>/
+###GET ```/accounts/verify/<token>/```
 
 
 For a password reset request:
-### POST /accounts/forgot-password/
+###  POST ```/accounts/forgot-password/```
 ```javascript
 body: 
 {
@@ -82,7 +82,7 @@ body:
 }
 ```
 For a resetting password confirmation:
-### POST /accounts/forgot-password/<token>/
+###  POST ```/accounts/forgot-password/<token>/```
 ```javascript
 body: 
 {
@@ -90,7 +90,7 @@ body:
 }
 ```
 
-### POST /accounts/login/
+###  POST ```/accounts/login/```
 ```javascript
 body: 
 {
@@ -98,7 +98,7 @@ body:
   "password": "345yr3jh2hg4wet"
 }
 ```
-This login post request would return ```access_token``` and ```refresh_token``` as
+This lo POSTgin request would return ```access_token``` and ```refresh_token``` as
 ```javascript
 {
   "refresh": "eyJhbGciOiJ...ssQfLtQ7NUluc",
@@ -106,7 +106,7 @@ This login post request would return ```access_token``` and ```refresh_token``` 
 }
 ```
 
-### POST /accounts/login/refresh/
+###  POST ```/accounts/login/refresh/```
 For providing another access token after it expires.
 ```javascript
 {
