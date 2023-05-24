@@ -64,8 +64,8 @@ body:
   "email": "someuser@example.com", 
   "password": "345yr3jh2hg4wet", 
   "organization": "organization-name-in-database", 
-  "phone": "9565...123", # Can be empty 
-  "address": "" # Can be empty
+  "phone": "9565...123", // Can be empty 
+  "address": "" // Can be empty
 }
 ```
 
