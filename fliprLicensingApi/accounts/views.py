@@ -29,6 +29,14 @@ def get_tokens_for_user(user):
     'test': str("hello")
   }
 
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def login(request):
+#   email = request.data["email"]
+#   user = Employee.objects.get(email=email)
+#   try:
+#     if user.is_verified == True:
+
 # Body { "name", "email", "password", "organization", "phone", "address" }
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -92,8 +100,8 @@ def forgot_password_request(request):
 @permission_classes([AllowAny])
 def reset_password(request, token):
   try:
+    user = Employee.objects.get(password_reset_token=token)
     if user.is_verified == True:
-      user = Employee.objects.get(password_reset_token=token)
       password = request.data['password']
       user.set_password(password)
       user.password_reset_token = None
