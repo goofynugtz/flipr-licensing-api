@@ -93,7 +93,7 @@ def forgot_password_request(request):
       return Response("Reset link has been sent on email.", status=status.HTTP_200_OK)
     return Response("User not verified.", status=status.HTTP_304_NOT_MODIFIED)
   except ObjectDoesNotExist:
-    return Response("No user found with this email.", status=status.HTTP_204_NO_CONTENT)
+    return Response("No user found with this email.", status=status.HTTP_404_NOT_FOUND)
 
 # Body { "password" }
 @api_view(['POST'])
