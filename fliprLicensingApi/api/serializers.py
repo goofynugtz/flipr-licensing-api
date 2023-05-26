@@ -4,7 +4,7 @@ from .models import License, Policy
 class LicenseSerializer(ModelSerializer):
   class Meta:
     model = License
-    fields = ('name', 'status')
+    fields = ('name', 'key', 'user', 'status', 'validUpto')
 
 class PolicySerializer(ModelSerializer):
   class Meta:
