@@ -12,35 +12,61 @@ services:
       - POSTGRES_DB=postgres
     ports:
       - 5432:5432
+
+  redis:
+    image: redis
+    container_name: redis
   
   api:
     container_name: api
+    image: api
     build: 
       context: ./fliprLicensingApi
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.django
     volumes:
-      - ./fliprLicensingApi/static:/static
+      - ./fliprLicensingApi:/app
+      # - ./fliprLicensingApi/static:/static
     ports:
       - 8000:8000
     depends_on:
       - db
+      - redis
     env_file:
       - ./fliprLicensingApi/.env
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   environment:
-  #     - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
-  #     - PGADMIN_DEFAULT_PASSWORD=admin
-  #   ports:
-  #     - 5050:80
+  celery-worker:
+    restart: always
+    container_name: celery-worker
+    image: api-celery-worker
+    build: 
+      context: ./fliprLicensingApi
+      dockerfile: Dockerfile.celery
+    command: celery -A fliprLicensingApi worker -l DEBUG
+    volumes:
+      - ./fliprLicensingApi:/app
+    depends_on:
+      - db
+      - redis
+      - api
+
+  celery-beat:
+    container_name: celery-beat
+    image: api-celery-beat
+    build: 
+      context: ./fliprLicensingApi
+      dockerfile: Dockerfile.celery
+    volumes:
+      - ./fliprLicensingApi:/app
+    depends_on:
+      - redis
+      - db
 
   nginx:
     image: nginx
     container_name: nginx
     restart: always
     volumes:
-    - ./static:/static
+    # - ./static:/static
     - ./nginx/conf.d:/etc/nginx/conf.d
     - ./nginx/certbot/conf:/etc/letsencrypt
     - ./nginx/certbot/logs:/var/log/letsencrypt
@@ -49,7 +75,7 @@ services:
     - 80:80
     - 443:443
     depends_on:
-      - prometheus
+      # - prometheus
       - api
 
   prometheus:
@@ -74,6 +100,14 @@ services:
       - 3000:3000
     depends_on:
       - prometheus
+
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=rahulranjan25.RR@gmail.com
+  #     - PGADMIN_DEFAULT_PASSWORD=admin
+  #   ports:
+  #     - 5050:80
 
 volumes:
   data:

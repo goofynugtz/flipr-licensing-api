@@ -47,7 +47,7 @@ def first_signup(request):
   
   confirmation_token = uuid.uuid4()
   Employee.objects.create(name=name, password=password, email=email, organization=organization, phone=phone, emp_address=address, confirmation_token=confirmation_token)
-  send_verification_mail(email, confirmation_token)
+  send_verification_mail.delay(email, confirmation_token)
 
   user = Employee.objects.get(email=email)
   user.set_password(password)
@@ -81,7 +81,7 @@ def forgot_password_request(request):
       token = uuid.uuid4()
       user.password_reset_token = token
       user.save()
-      send_password_reset_mail(email, token)
+      send_password_reset_mail.delay(email, token)
       return Response("Reset link has been sent on email.", status=status.HTTP_200_OK)
     return Response("User not verified.", status=status.HTTP_304_NOT_MODIFIED)
   except ObjectDoesNotExist:
