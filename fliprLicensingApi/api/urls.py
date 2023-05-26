@@ -8,4 +8,5 @@ urlpatterns = [
   path('actions/resume/', resume, name='resume'),
   path('actions/revoke/', revoke, name='revoke'),
   path('metrics/', compute_metrics, name='metrics'),
+  path('licenses/', licenses, name='licenses'),
 ]

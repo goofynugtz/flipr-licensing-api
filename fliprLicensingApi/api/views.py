@@ -22,6 +22,15 @@ counter = {
   'revoked': Counter('total_licenses_revoked', 'Total no. of license keys revoked')
 }
 
+# Header { "Authorization": "Bearer JWT" }
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@non_atomic_requests
+def licenses(request):
+  license_records = License.objects.all()
+  return Response(license_records, status=status.HTTP_200_OK)
+
+
 # Body { "email", "key" }
 @api_view(['GET'])
 @permission_classes([AllowAny])
