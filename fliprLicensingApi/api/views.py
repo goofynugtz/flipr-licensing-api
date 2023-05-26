@@ -28,7 +28,8 @@ counter = {
 @non_atomic_requests
 def licenses(request):
   license_records = License.objects.all()
-  return Response(license_records, status=status.HTTP_200_OK)
+  serializer = LicenseSerializer(license_records, many=True)
+  return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Body { "email", "key" }
