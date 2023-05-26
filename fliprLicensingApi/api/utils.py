@@ -1,11 +1,28 @@
+from __future__ import absolute_import, unicode_literals
 from base64 import b64decode, b64encode
 from django.core.mail import send_mail
+from celery import shared_task
 from decouple import config
+from .models import License
 import rsa
+from django.core.cache import cache
 
-def generate_license(email, private_key):
-  key = rsa.PrivateKey.load_pkcs1(private_key)
-  return b64encode(rsa.sign(email.encode(), key, 'SHA-1')).decode()
+@shared_task
+def generate_license(name, user, policy, validUpto):
+  public_key, private_key = new_rsa()
+  signature = rsa.PrivateKey.load_pkcs1(private_key)
+  key = b64encode(rsa.sign(user.email.encode(), signature, 'SHA-1')).decode()
+  License.objects.create(
+    name=name,
+    key=key,
+    public_key=public_key,
+    private_key=private_key,
+    user=user,
+    validUpto=validUpto
+  )
+  mail_license_keys.delay(key, user.email)
+  record = License.objects.get(key=key)
+  cache.set([user.email, key], True, record.status)
 
 def new_rsa():
   public, private = rsa.newkeys(512)
@@ -20,6 +37,7 @@ def validate_signature(email, license_key, public_key):
   else:
     return True
 
+@shared_task
 def mail_license_keys(key, to_email):
   from_mail = config("FROM_ACCOUNT")
   subject = "License Key"

@@ -9,4 +9,5 @@ urlpatterns = [
   path('actions/revoke/', revoke, name='revoke'),
   path('metrics/', compute_metrics, name='metrics'),
   path('licenses/', licenses, name='licenses'),
+  path('active/', currentlyOnlineUsers, name='active-users'),
 ]

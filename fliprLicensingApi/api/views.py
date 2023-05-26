@@ -1,9 +1,9 @@
-from .utils import validate_signature, generate_license, new_rsa, mail_license_keys
+from .utils import validate_signature, generate_license
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.transaction import atomic, non_atomic_requests
+from django.db.transaction import non_atomic_requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.utils import timezone
@@ -13,6 +13,12 @@ from decouple import config
 from .models import License, Policy
 from .serializers import LicenseSerializer
 import jwt
+from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
+from django.core.cache import cache
+
+API_REFRESH_RATE = getattr(settings, 'API_REFRESH_RATE', 10)
+LICENSES_TTL = 60*60*24
 
 counter = {
   'success': Counter('total_successful_validations', 'Total no. of successful validation requests'),
@@ -22,10 +28,17 @@ counter = {
   'revoked': Counter('total_licenses_revoked', 'Total no. of license keys revoked')
 }
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def currentlyOnlineUsers():
+  users = Employee.objects.all()
+  counter = sum(1 for user in users if cache.get(user.email))
+  return Response(counter, status=status.HTTP_200_OK)
+
+
 # Header { "Authorization": "Bearer JWT" }
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@non_atomic_requests
 def licenses(request):
   license_records = License.objects.all()
   serializer = LicenseSerializer(license_records, many=True)
@@ -35,13 +48,15 @@ def licenses(request):
 # Body { "email", "key" }
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@non_atomic_requests
 def validate(request):
   email = request.data["email"].lower()
   key = request.data['key']
+  if cache.get([email, key]):
+    return Response(cache.get([email, key]), status=status.HTTP_200_OK)
   try:
     user = Employee.objects.get(email=email)
     if user.is_verified == True:
+      cache.set(user.email, True, API_REFRESH_RATE)
       try:
         license_record = License.objects.get(user=user)
         if (validate_signature(email=email, license_key=key, public_key=license_record.public_key)):
@@ -54,6 +69,7 @@ def validate(request):
             return Response(license_record.status, status=status.HTTP_406_NOT_ACCEPTABLE)
           else: 
             counter['success'].inc()
+            cache.set([email, key], license_record.status, LICENSES_TTL)
             return Response(license_record.status, status=status.HTTP_200_OK)
         else:
           counter['failed'].inc()
@@ -70,7 +86,6 @@ def validate(request):
 # Body   { "name", "policy"}
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@atomic
 def issue(request):
   access_token = request.headers['Authorization'].split(' ')[-1]
   name = request.data["name"]
@@ -86,32 +101,20 @@ def issue(request):
         if (len(previous_license) > 0):
             previous_license.delete()
         validUpto = timezone.now() + policy.validity
-        public_key, private_key = new_rsa()
-        key = generate_license(email, private_key)
-        License.objects.create(
-          name = name,
-          key = key,
-          public_key = public_key,
-          private_key = private_key,
-          user = user,
-          policy = policy,
-          validUpto = validUpto,
-        )
-        mail_license_keys(key, email)
+        # Passing rest process Celery
+        generate_license.delay(name=name, user=user, policy=policy, validUpto=validUpto)
         counter['issued'].inc()
         return Response("License key has been mailed.", status=status.HTTP_201_CREATED)
-        # return Response(key, status=status.HTTP_201_CREATED)
       return Response("User not verified.", status=status.HTTP_400_BAD_REQUEST)
     except ObjectDoesNotExist:
       return Response("Employee/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
-    return Response("Invalid policy.", status=status.HTTP_404_NOT_FOUND)
+    return Response("Invalid policy selected", status=status.HTTP_404_NOT_FOUND)
 
 # Header { "Authorization": "Bearer JWT" } 
 # Body   { "email" }
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-@non_atomic_requests
 def suspend(request):
   email = request.data['email']
   try:
@@ -132,7 +135,6 @@ def suspend(request):
 # Body   { "email" }
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-@non_atomic_requests
 def resume(request):
   email = request.data['email']
   try:
@@ -152,7 +154,6 @@ def resume(request):
 # Body   { "email" }
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@non_atomic_requests
 def revoke(request):
   email = request.data['email']
   try:
@@ -166,7 +167,6 @@ def revoke(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@non_atomic_requests
 def compute_metrics(request):
   res = []
   for _, value in counter.items():

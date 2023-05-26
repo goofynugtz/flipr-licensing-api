@@ -25,7 +25,6 @@ services:
       dockerfile: Dockerfile.django
     volumes:
       - ./fliprLicensingApi:/app
-      # - ./fliprLicensingApi/static:/static
     ports:
       - 8000:8000
     depends_on:
@@ -66,7 +65,6 @@ services:
     container_name: nginx
     restart: always
     volumes:
-    # - ./static:/static
     - ./nginx/conf.d:/etc/nginx/conf.d
     - ./nginx/certbot/conf:/etc/letsencrypt
     - ./nginx/certbot/logs:/var/log/letsencrypt

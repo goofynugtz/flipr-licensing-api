@@ -205,8 +205,19 @@ AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_SES_REGION_NAME = config('AWS_SES_REGION_NAME')
 AWS_SES_REGION_ENDPOINT = config('AWS_SES_REGION_ENDPOINT')
 
-
-
-
 CELERY_BROKER_URL = config('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+
+CACHE_TTL = 60 * 60 * 24 * 10
+API_REFRESH_RATE = 10
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://redis:6379/0",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+        },
+        "KEY_PREFIX": "example"
+    }
+}
