@@ -16,9 +16,9 @@ services:
   redis:
     image: redislabs/redistimeseries
     container_name: redis
-    # volumes:
-    #   - redis-data/:/data 
-    #   - redis/redis-stack:latest
+    volumes:
+      - redis/:/data 
+
     ports:
       - 6379:6379
   
@@ -115,3 +115,4 @@ services:
 volumes:
   data:
   grafana:
+  redis:

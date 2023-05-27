@@ -53,10 +53,12 @@ def validate(request):
   email = request.data["email"].lower()
   key = request.data['key']
   if cache.get([email, key]):
-    # Asterisk denotes Server timestamp, 
+    # Asterisk denotes server timestamp, 
     # See: https://redis-py.readthedocs.io/en/stable/examples/timeseries_examples.html
     timestamps.add(user.email, "*", 1) 
-    return Response(cache.get([email, key]), status=status.HTTP_200_OK)
+    return Response({
+      "meta": { "code": cache.get([email, key]), "ttl": API_REFRESH_RATE,}
+    }, status=status.HTTP_200_OK)
   try:
     user = Employee.objects.get(email=email)
     if user.is_verified == True:
@@ -71,22 +73,34 @@ def validate(request):
               license_serializer.save()
             counter['failed'].inc()
             cache.set([email, key], license_record.status, LICENSES_TTL)
-            return Response(license_record.status, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response({
+              "meta": { "code": license_record.status, "ttl": API_REFRESH_RATE,}
+            }, status=status.HTTP_406_NOT_ACCEPTABLE)
           else: 
             counter['success'].inc()
             timestamps.add(user.email, "*", 1)
             cache.set([email, key], license_record.status, LICENSES_TTL)
-            return Response(license_record.status, status=status.HTTP_200_OK)
+            return Response({
+              "meta": { "code": license_record.status, "ttl": API_REFRESH_RATE,}
+            }, status=status.HTTP_200_OK)
         else:
           counter['failed'].inc()
-          return Response("INVALID", status=status.HTTP_406_NOT_ACCEPTABLE)
+          return Response({
+            "meta": { "code": "INVALID", "ttl": API_REFRESH_RATE,}
+          }, status=status.HTTP_406_NOT_ACCEPTABLE)
       except ObjectDoesNotExist:
         counter['failed'].inc()
-        return Response("NOT_FOUND", status=status.HTTP_404_NOT_FOUND)
-    return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
+        return Response({
+          "meta": { "code": "NOT_FOUND", "ttl": API_REFRESH_RATE,}
+        }, status=status.HTTP_404_NOT_FOUND)
+    return Response({
+      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": API_REFRESH_RATE,}
+    }, status=status.HTTP_403_FORBIDDEN)
   except ObjectDoesNotExist:
     counter['failed'].inc()
-    return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
+    return Response({
+      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": API_REFRESH_RATE,}
+    }, status=status.HTTP_403_FORBIDDEN)
 
 
 # Header { "Authorization": "Bearer JWT" } 
