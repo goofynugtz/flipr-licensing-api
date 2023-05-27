@@ -7,35 +7,50 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Employee, Organization
 from .utils import send_password_reset_mail, send_verification_mail
+from api.utils import timestamps
+from django.core.cache import cache
+from math import floor
 import uuid
-from rest_framework_simplejwt.tokens import RefreshToken
 
-class CustomObtainPairSerializer(TokenObtainPairSerializer):
+FORGOT_PASSWORD_TTL = 60*5
+
+
+class Refresh(TokenObtainPairSerializer):
   @classmethod
   def get_token(cls, user):
     token = super().get_token(user)
     token['email'] = user.email
     return token
 
-class CustomObtainPairView(TokenObtainPairView):
-  serializer_class = CustomObtainPairSerializer
-
 
 def get_tokens_for_user(user):
-  refresh = RefreshToken.for_user(user)
+  refresh = Refresh.get_token(user)
   return {
     'refresh': str(refresh),
     'access': str(refresh.access_token),
-    'test': str("hello")
   }
 
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def login(request):
-#   email = request.data["email"]
-#   user = Employee.objects.get(email=email)
-#   try:
-#     if user.is_verified == True:
+
+# Body { "email", "password", }
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+  email = request.data["email"]
+  password = request.data["password"]
+  user = Employee.objects.get(email=email)
+  try:
+    if user.is_verified == True:
+      if user.check_password(password):
+        timestamps.add(user.email, "*", 1)
+        return Response(get_tokens_for_user(user), status=status.HTTP_200_OK)
+      return Response({
+        "detail": "No active account found with the given credentials"
+      }, status=status.HTTP_401_UNAUTHORIZED)
+  except ObjectDoesNotExist:
+    return Response({
+      "detail": "No active account found with the given credentials"
+    }, status=status.HTTP_401_UNAUTHORIZED)
+
 
 # Body { "name", "email", "password", "organization", "phone", "address" }
 @api_view(['POST'])
@@ -44,7 +59,9 @@ def first_signup(request):
   email = request.data["email"]
   user = Employee.objects.filter(email=email)
   if (len(user) > 0):
-    return Response("Already exists", status=status.HTTP_208_ALREADY_REPORTED)
+    return Response({
+      "detail": "Email already taken"
+    }, status=status.HTTP_208_ALREADY_REPORTED)
   
   name = request.data["name"]
   password = request.data["password"]
@@ -60,8 +77,9 @@ def first_signup(request):
   user = Employee.objects.get(email=email)
   user.set_password(password)
   user.save()
-
-  return Response("Verification email has been sent.", status=status.HTTP_201_CREATED)
+  return Response({
+    "detail": "Verification email has been sent"
+  }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -72,10 +90,15 @@ def confirm_signup(request, token):
     user.is_verified = True
     user.confirmation_token = None
     user.save()
+    timestamps.create(user.email)
     
-    return Response("User verification complete.", status=status.HTTP_200_OK)
+    return Response({
+      "detail": "User verified"
+    }, status=status.HTTP_200_OK)
   except ObjectDoesNotExist:
-    return Response("Email not found.", status=status.HTTP_404_NOT_FOUND)
+    return Response({
+      "detail": "Email not found"
+    }, status=status.HTTP_404_NOT_FOUND)
 
 
 # Body { "email" }
@@ -83,17 +106,31 @@ def confirm_signup(request, token):
 @permission_classes([AllowAny])
 def forgot_password_request(request):
   email = request.data['email']
+  if cache.get([email, "FORGOT"]):
+    ttl = floor(cache.ttl([email, "FORGOT"])/60)
+    return Response({
+      "detail": f"Password reset mail has been sent. Please try again in {ttl} minutes"
+    }, status=status.HTTP_425_TOO_EARLY)
   try:
     user = Employee.objects.get(email=email)
     if user.is_verified == True:
       token = uuid.uuid4()
       user.password_reset_token = token
       user.save()
+      # Adding to cache with FORGOT flag to throttle email requests.
+      cache.set([user.email, "FORGOT"], 1, FORGOT_PASSWORD_TTL)
       send_password_reset_mail.delay(email, token)
-      return Response("Reset link has been sent on email.", status=status.HTTP_200_OK)
-    return Response("User not verified.", status=status.HTTP_304_NOT_MODIFIED)
+      return Response({
+        "detail": "Reset link has been sent on email"
+      }, status=status.HTTP_200_OK)
+    return Response({
+      "detail": "User not verified"
+    }, status=status.HTTP_401_UNAUTHORIZED)
   except ObjectDoesNotExist:
-    return Response("No user found with this email.", status=status.HTTP_404_NOT_FOUND)
+    return Response({
+      "detail": "No user found with this email"
+    }, status=status.HTTP_404_NOT_FOUND)
+
 
 # Body { "password" }
 @api_view(['POST'])
@@ -106,7 +143,14 @@ def reset_password(request, token):
       user.set_password(password)
       user.password_reset_token = None
       user.save()
-      return Response("Password reset successfull.", status=status.HTTP_202_ACCEPTED)
-    return Response("User not verified.", status=status.HTTP_304_NOT_MODIFIED)
+      timestamps.add(user.email, "*", 1)
+      return Response({
+        "detail": "Password reset successfull"
+      }, status=status.HTTP_202_ACCEPTED)
+    return Response({
+      "detail": "User not verified"
+    }, status=status.HTTP_401_UNAUTHORIZED)
   except ObjectDoesNotExist:
-    return Response("Password reset token has expired.", status=status.HTTP_403_FORBIDDEN)
+    return Response({
+      "detail": "Reset token has expired"
+    }, status=status.HTTP_403_FORBIDDEN)

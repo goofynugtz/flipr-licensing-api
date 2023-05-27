@@ -3,7 +3,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.transaction import non_atomic_requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.utils import timezone
@@ -16,6 +15,7 @@ import jwt
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.core.cache import cache
+from .utils import timestamps
 
 API_REFRESH_RATE = getattr(settings, 'API_REFRESH_RATE', 10)
 LICENSES_TTL = 60*60*24
@@ -28,9 +28,10 @@ counter = {
   'revoked': Counter('total_licenses_revoked', 'Total no. of license keys revoked')
 }
 
+# Header { "Authorization": "Bearer JWT" }
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def currentlyOnlineUsers():
+def currentlyOnlineUsers(request):
   users = Employee.objects.all()
   counter = sum(1 for user in users if cache.get(user.email))
   return Response(counter, status=status.HTTP_200_OK)
@@ -52,6 +53,9 @@ def validate(request):
   email = request.data["email"].lower()
   key = request.data['key']
   if cache.get([email, key]):
+    # Asterisk denotes Server timestamp, 
+    # See: https://redis-py.readthedocs.io/en/stable/examples/timeseries_examples.html
+    timestamps.add(user.email, "*", 1) 
     return Response(cache.get([email, key]), status=status.HTTP_200_OK)
   try:
     user = Employee.objects.get(email=email)
@@ -66,9 +70,11 @@ def validate(request):
             if (license_serializer.is_valid()):
               license_serializer.save()
             counter['failed'].inc()
+            cache.set([email, key], license_record.status, LICENSES_TTL)
             return Response(license_record.status, status=status.HTTP_406_NOT_ACCEPTABLE)
           else: 
             counter['success'].inc()
+            timestamps.add(user.email, "*", 1)
             cache.set([email, key], license_record.status, LICENSES_TTL)
             return Response(license_record.status, status=status.HTTP_200_OK)
         else:
@@ -81,6 +87,7 @@ def validate(request):
   except ObjectDoesNotExist:
     counter['failed'].inc()
     return Response("USER_SCOPE_MISMATCH", status=status.HTTP_403_FORBIDDEN)
+
 
 # Header { "Authorization": "Bearer JWT" } 
 # Body   { "name", "policy"}
@@ -96,20 +103,31 @@ def issue(request):
     email = data['email']
     try:
       user = Employee.objects.get(email=email)
+      timestamps.add(user.email, "*", 1)
       if user.is_verified == True:
         previous_license = License.objects.filter(user=user)
         if (len(previous_license) > 0):
             previous_license.delete()
         validUpto = timezone.now() + policy.validity
-        # Passing rest process Celery
-        generate_license.delay(name=name, user=user, policy=policy, validUpto=validUpto)
+        # Passing rest process to Celery: 
+        # See: https://docs.celeryq.dev/en/stable/userguide/calling.html
+        generate_license.delay(name, email, policy.id, validUpto)
         counter['issued'].inc()
-        return Response("License key has been mailed.", status=status.HTTP_201_CREATED)
-      return Response("User not verified.", status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+          "detail": "License key has been mailed"
+        }, status=status.HTTP_201_CREATED)
+      return Response({
+        "detail": "User not verified"
+      }, status=status.HTTP_400_BAD_REQUEST)
     except ObjectDoesNotExist:
-      return Response("Employee/Email does not exist.", status=status.HTTP_400_BAD_REQUEST)
+      return Response({
+        "detail": "Employee / Email does not exist"
+      }, status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
-    return Response("Invalid policy selected", status=status.HTTP_404_NOT_FOUND)
+    return Response({
+      "detail": "Invalid policy"
+    }, status=status.HTTP_404_NOT_FOUND)
+
 
 # Header { "Authorization": "Bearer JWT" } 
 # Body   { "email" }
@@ -125,11 +143,17 @@ def suspend(request):
     if license_serializer.is_valid():
       license_serializer.save()
       counter['suspended'].inc()
-      return Response("License Suspended", status=status.HTTP_202_ACCEPTED)
-    else:
-      return Response("Something went wrong. Please contact your administrator.", status=status.HTTP_304_NOT_MODIFIED)
+      return Response({
+        "detail": "License suspended"
+      }, status=status.HTTP_202_ACCEPTED)
+    return Response({
+      "detail": "Something went wrong"
+    }, status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
-    return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+    return Response({
+      "detail": "Employee / License does not exist"
+    }, status=status.HTTP_401_UNAUTHORIZED)
+
 
 # Header { "Authorization": "Bearer JWT" } 
 # Body   { "email" }
@@ -144,11 +168,17 @@ def resume(request):
     license_serializer = LicenseSerializer(instance=license_record, data=record_status, partial=True)
     if license_serializer.is_valid():
       license_serializer.save()
-      return Response("License status Continued", status=status.HTTP_202_ACCEPTED)
-    else:
-      return Response("Something went wrong. Please contact your administrator.", status=status.HTTP_304_NOT_MODIFIED)
+      return Response({
+        "detail": "License status Continued"
+      }, status=status.HTTP_202_ACCEPTED)
+    return Response({
+      "detail": "Something went wrong"
+    }, status=status.HTTP_400_BAD_REQUEST)
   except ObjectDoesNotExist:
-    return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+    return Response({
+      "detail": "Employee / License does not exist"
+    }, status=status.HTTP_401_UNAUTHORIZED)
+
 
 # Header { "Authorization": "Bearer JWT" } 
 # Body   { "email" }
@@ -161,9 +191,13 @@ def revoke(request):
     license_record = License.objects.get(user=user)
     license_record.delete()
     counter['revoked'].inc()
-    return Response("Deleted", status=status.HTTP_200_OK)
+    return Response({
+      "detail": "License deleted"
+    }, status=status.HTTP_200_OK)
   except:
-    return Response("Employee/License does not exists.", status=status.HTTP_401_UNAUTHORIZED)
+    return Response({
+      "detail": "Employee / License does not exists"
+    }, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

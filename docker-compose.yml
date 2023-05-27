@@ -14,8 +14,13 @@ services:
       - 5432:5432
 
   redis:
-    image: redis
+    image: redislabs/redistimeseries
     container_name: redis
+    # volumes:
+    #   - redis-data/:/data 
+    #   - redis/redis-stack:latest
+    ports:
+      - 6379:6379
   
   api:
     container_name: api

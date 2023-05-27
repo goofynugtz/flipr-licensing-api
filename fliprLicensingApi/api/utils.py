@@ -3,26 +3,33 @@ from base64 import b64decode, b64encode
 from django.core.mail import send_mail
 from celery import shared_task
 from decouple import config
-from .models import License
+from .models import License, Employee, Policy
 import rsa
 from django.core.cache import cache
+import redis
+
+redisDb = redis.Redis(host='redis', port=6379, decode_responses=True)
+timestamps = redisDb.ts()
 
 @shared_task
-def generate_license(name, user, policy, validUpto):
+def generate_license(name, email, policyId, validUpto):
   public_key, private_key = new_rsa()
   signature = rsa.PrivateKey.load_pkcs1(private_key)
-  key = b64encode(rsa.sign(user.email.encode(), signature, 'SHA-1')).decode()
+  key = b64encode(rsa.sign(email.encode(), signature, 'SHA-1')).decode()
+  user = Employee.objects.get(email=email)
+  policy = Policy.objects.get(id=policyId)
   License.objects.create(
     name=name,
     key=key,
     public_key=public_key,
     private_key=private_key,
     user=user,
+    policy=policy,
     validUpto=validUpto
   )
-  mail_license_keys.delay(key, user.email)
-  record = License.objects.get(key=key)
-  cache.set([user.email, key], True, record.status)
+  mail_license_keys.delay(key, email)
+  license_record = License.objects.get(key=key)
+  cache.set([email, key], True, license_record.status)
 
 def new_rsa():
   public, private = rsa.newkeys(512)

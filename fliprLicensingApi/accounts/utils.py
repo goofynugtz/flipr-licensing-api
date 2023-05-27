@@ -15,7 +15,6 @@ Your requested link for resetting password is:
 This is an auto-generated mail. Please, do not reply.
 """
   send_mail(subject, body, from_mail, [to_email])
-  return True
 
 @shared_task
 def send_verification_mail(to_email, confirmation_token):
@@ -30,4 +29,3 @@ If it wasn't you, then please ignore this mail.
 This is an auto-generated mail. Please, do not reply.
 """
   send_mail(subject, body, from_mail, [to_email])
-  return True
