@@ -55,7 +55,7 @@ def validate(request):
   if cache.get([email, key]):
     # Asterisk denotes server timestamp, 
     # See: https://redis-py.readthedocs.io/en/stable/examples/timeseries_examples.html
-    timestamps.add(user.email, "*", 1) 
+    timestamps.add(email, "*", 1) 
     return Response({
       "meta": { "code": cache.get([email, key]), "ttl": API_REFRESH_RATE,}
     }, status=status.HTTP_200_OK)
