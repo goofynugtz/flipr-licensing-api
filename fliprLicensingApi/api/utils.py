@@ -7,9 +7,23 @@ from .models import License, Employee, Policy
 import rsa
 from django.core.cache import cache
 import redis
+from django.utils import timezone
+from api.models import License
+from api.serializers import LicenseSerializer
+from fliprLicensingApi.celery import app
 
 redisDb = redis.Redis(host='redis', port=6379, decode_responses=True)
 timestamps = redisDb.ts()
+
+@app.task(name='updateLicenseStatus')
+def updateLicenseStatus():
+  licenses = License.objects.all()
+  for record in licenses:
+    if (record.validUpto < timezone.now()):
+      record_status = { "status": License.EXP, }
+      license_serializer = LicenseSerializer(instance=record, data=record_status, partial=True)
+      if (license_serializer.is_valid()):
+        license_serializer.save()
 
 @shared_task
 def generate_license(name, email, policyId, validUpto):

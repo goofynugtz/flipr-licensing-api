@@ -41,11 +41,11 @@ services:
   celery-worker:
     restart: always
     container_name: celery-worker
-    image: api-celery-worker
+    image: api-worker
     build: 
       context: ./fliprLicensingApi
       dockerfile: Dockerfile.celery
-    command: celery -A fliprLicensingApi worker -l DEBUG
+    command: celery -A fliprLicensingApi worker -l DEBUG --pool threads
     volumes:
       - ./fliprLicensingApi:/app
     depends_on:
@@ -55,15 +55,18 @@ services:
 
   celery-beat:
     container_name: celery-beat
-    image: api-celery-beat
+    image: api-beat
     build: 
       context: ./fliprLicensingApi
       dockerfile: Dockerfile.celery
+    command: celery -A fliprLicensingApi beat -l DEBUG --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - ./fliprLicensingApi:/app
     depends_on:
       - redis
       - db
+      - api
+      - celery-worker
 
   nginx:
     image: nginx

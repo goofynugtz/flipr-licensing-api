@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_prometheus',
+    'django_celery_beat',
 ]
 
 REST_FRAMEWORK = {
@@ -205,12 +206,20 @@ AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_SES_REGION_NAME = config('AWS_SES_REGION_NAME')
 AWS_SES_REGION_ENDPOINT = config('AWS_SES_REGION_ENDPOINT')
 
+REFRESH_INTERVAL = 10
+
 CELERY_BROKER_URL = config('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
 
-CACHE_TTL = 60 * 60 * 24 * 10
-API_REFRESH_RATE = 10
+CELERYBEAT_SCHEDULE = {
+    "license-updation": {
+        "task": 'updateLicenseStatus',
+        "schedule": timedelta(seconds=REFRESH_INTERVAL)
+    }
+}
+CELERY_TIMEZONE = 'UTC'
 
+CACHE_TTL = 60 * 60 * 24 * 10
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",

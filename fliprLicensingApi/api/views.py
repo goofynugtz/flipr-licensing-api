@@ -17,7 +17,7 @@ from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.core.cache import cache
 from .utils import timestamps
 
-API_REFRESH_RATE = getattr(settings, 'API_REFRESH_RATE', 10)
+REFRESH_INTERVAL = getattr(settings, 'REFRESH_INTERVAL', 10)
 LICENSES_TTL = 60*60*24
 
 counter = {
@@ -57,12 +57,12 @@ def validate(request):
     # See: https://redis-py.readthedocs.io/en/stable/examples/timeseries_examples.html
     timestamps.add(email, "*", 1) 
     return Response({
-      "meta": { "code": cache.get([email, key]), "ttl": API_REFRESH_RATE,}
+      "meta": { "code": cache.get([email, key]), "ttl": REFRESH_INTERVAL,}
     }, status=status.HTTP_200_OK)
   try:
     user = Employee.objects.get(email=email)
     if user.is_verified == True:
-      cache.set(user.email, True, API_REFRESH_RATE)
+      cache.set(user.email, True, REFRESH_INTERVAL)
       try:
         license_record = License.objects.get(user=user)
         if (validate_signature(email=email, license_key=key, public_key=license_record.public_key)):
@@ -74,32 +74,32 @@ def validate(request):
             counter['failed'].inc()
             cache.set([email, key], license_record.status, LICENSES_TTL)
             return Response({
-              "meta": { "code": license_record.status, "ttl": API_REFRESH_RATE,}
+              "meta": { "code": license_record.status, "ttl": REFRESH_INTERVAL,}
             }, status=status.HTTP_406_NOT_ACCEPTABLE)
           else: 
             counter['success'].inc()
             timestamps.add(user.email, "*", 1)
             cache.set([email, key], license_record.status, LICENSES_TTL)
             return Response({
-              "meta": { "code": license_record.status, "ttl": API_REFRESH_RATE,}
+              "meta": { "code": license_record.status, "ttl": REFRESH_INTERVAL,}
             }, status=status.HTTP_200_OK)
         else:
           counter['failed'].inc()
           return Response({
-            "meta": { "code": "INVALID", "ttl": API_REFRESH_RATE,}
+            "meta": { "code": "INVALID", "ttl": REFRESH_INTERVAL,}
           }, status=status.HTTP_406_NOT_ACCEPTABLE)
       except ObjectDoesNotExist:
         counter['failed'].inc()
         return Response({
-          "meta": { "code": "NOT_FOUND", "ttl": API_REFRESH_RATE,}
+          "meta": { "code": "NOT_FOUND", "ttl": REFRESH_INTERVAL,}
         }, status=status.HTTP_404_NOT_FOUND)
     return Response({
-      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": API_REFRESH_RATE,}
+      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": REFRESH_INTERVAL,}
     }, status=status.HTTP_403_FORBIDDEN)
   except ObjectDoesNotExist:
     counter['failed'].inc()
     return Response({
-      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": API_REFRESH_RATE,}
+      "meta": { "code": "USER_SCOPE_MISMATCH", "ttl": REFRESH_INTERVAL,}
     }, status=status.HTTP_403_FORBIDDEN)
 
 
