@@ -59,7 +59,7 @@ services:
     build: 
       context: ./fliprLicensingApi
       dockerfile: Dockerfile.celery
-    command: celery -A fliprLicensingApi beat -l DEBUG --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A fliprLicensingApi beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - ./fliprLicensingApi:/app
     depends_on:
