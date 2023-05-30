@@ -22,7 +22,7 @@ body:
 ```
 
 Validating license from user
-### GET ```/api/validate```
+### GET ```/api/validate/```
   
 ```javascript
 body:
